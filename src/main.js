@@ -1,10 +1,8 @@
-import * as THREE from 'three';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-
 const video = document.getElementById("videoInput");
 const canvas = document.getElementById("threeCanvas");
 const referenceImage = document.getElementById("referenceImage");
-let scene, camera, renderer, planeModel;
+const videoPlayback = document.getElementById("videoPlayback");
+
 let referenceFeatures;
 
 // Лог начала работы
@@ -12,6 +10,7 @@ console.log("Начало работы программы.");
 
 // Настройка камеры
 async function setupCamera() {
+  console.log("Настройка камеры...");
   const stream = await navigator.mediaDevices.getUserMedia({ video: true });
   video.srcObject = stream;
   return new Promise((resolve) => {
@@ -24,71 +23,6 @@ async function setupCamera() {
   });
 }
 
-// Инициализация Three.js сцены
-function initThree() {
-  console.log("Инициализация сцены Three.js...");
-  scene = new THREE.Scene();
-
-  // Камера
-  camera = new THREE.PerspectiveCamera(75, canvas.width / canvas.height, 0.1, 1000);
-  camera.position.z = 5;
-
-  // Рендерер
-  renderer = new THREE.WebGLRenderer({ canvas, alpha: true });
-  renderer.setSize(canvas.width, canvas.height);
-
-  // Свет
-  const ambientLight = new THREE.AmbientLight(0xffffff, 1);
-  scene.add(ambientLight);
-
-  const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
-  directionalLight.position.set(1, 1, 1);
-  scene.add(directionalLight);
-
-  // Загрузка модели самолета
-  const loader = new GLTFLoader();
-  loader.load(
-    '/airplane.glb', // Убедитесь, что модель доступна по этому пути
-    (gltf) => {
-      planeModel = gltf.scene;
-      planeModel.scale.set(0.5, 0.5, 0.5);
-      planeModel.position.set(0, 0, 0);
-      planeModel.visible = false;
-      scene.add(planeModel);
-      console.log("3D модель самолета успешно загружена.");
-      renderer.render(scene, camera);
-    },
-    undefined,
-    (error) => {
-      console.error("Ошибка при загрузке модели:", error);
-    }
-  );
-}
-
-// Анимация модели
-let isAnimating = false;
-
-function animatePlane() {
-  if (!planeModel || isAnimating) return;
-
-  planeModel.visible = true;
-  isAnimating = true;
-
-  function animate() {
-    if (!planeModel.visible) {
-      isAnimating = false;
-      return;
-    }
-
-    planeModel.position.y += 0.01;
-    planeModel.rotation.y += 0.05;
-
-    renderer.render(scene, camera);
-    requestAnimationFrame(animate);
-  }
-  animate();
-}
-
 // Загрузка модели TensorFlow.js
 async function loadModel() {
   console.log("Загрузка модели TensorFlow.js...");
@@ -97,7 +31,7 @@ async function loadModel() {
   return model;
 }
 
-// Сравнение текущего кадра с эталоном
+// Извлечение эталонных признаков
 async function extractReferenceFeatures(model) {
   console.log("Извлечение эталонных признаков из изображения...");
   const imageTensor = tf.browser.fromPixels(referenceImage).expandDims();
@@ -107,6 +41,7 @@ async function extractReferenceFeatures(model) {
   return features;
 }
 
+// Сравнение текущего кадра с эталоном
 async function compareFrames(model) {
   console.log("Начало сравнения текущих кадров с эталоном...");
   const interval = 500;
@@ -123,11 +58,11 @@ async function compareFrames(model) {
       const similarityThreshold = 0.2;
 
       if (similarity < similarityThreshold) {
-        console.log("Картина распознана!");
-        animatePlane();
+        console.log("Hello"); // Успешное распознавание
+        playVideo();
       } else {
         console.log("Картина не распознана.");
-        if (planeModel) planeModel.visible = false;
+        stopVideo();
       }
 
       tf.dispose(videoTensor);
@@ -138,11 +73,25 @@ async function compareFrames(model) {
   }, interval);
 }
 
+// Воспроизведение видео
+function playVideo() {
+  console.log("Запуск видео...");
+  videoPlayback.style.display = "block";
+  videoPlayback.play();
+}
+
+// Остановка видео
+function stopVideo() {
+  console.log("Остановка видео...");
+  videoPlayback.style.display = "none";
+  videoPlayback.pause();
+  videoPlayback.currentTime = 0;
+}
+
 // Основная функция
 async function main() {
   console.log("Запуск основной программы...");
   await setupCamera();
-  initThree();
   const model = await loadModel();
   referenceFeatures = await extractReferenceFeatures(model);
 

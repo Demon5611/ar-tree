@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Custom AR Implementation</title>
+  <title>AR Video Playback</title>
   <style>
     canvas, video {
       position: absolute;
@@ -13,6 +13,9 @@
       height: 100%;
       object-fit: cover;
     }
+    #videoPlayback {
+      display: none; /* Скрываем видео по умолчанию */
+    }
   </style>
 </head>
 <body>
@@ -20,17 +23,17 @@
   <video id="videoInput" autoplay></video>
   <canvas id="threeCanvas"></canvas>
 
-  <!-- Загружаем эталонное изображение -->
+  <!-- Эталонное изображение -->
   <img id="referenceImage" src="/painting.jpg" style="display: none;">
 
-  <!-- Подключаем TensorFlow.js -->
+  <!-- Видео для воспроизведения -->
+  <video id="videoPlayback" src="/airPlan_converted.mp4" loop></video>
+
+  <!-- TensorFlow.js -->
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet"></script>
-  <!-- Подключаем Three.js -->
-  <script src="https://cdn.jsdelivr.net/npm/three@0.153.0/build/three.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.153.0/examples/js/loaders/GLTFLoader.js"></script>
 
-  <!-- Подключаем основной код -->
+  <!-- Основной код -->
   <script type="module" src="/src/main.js"></script>
 </body>
 </html>
