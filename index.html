@@ -26,16 +26,16 @@ video, canvas {
   <canvas id="threeCanvas"></canvas>
 
   <!-- Эталонное изображение -->
-  <img id="referenceImage" src="/painting.jpg" style="display: none;">
+  <img id="referenceImage" src="./public/painting.jpg" style="display: none;">
 
   <!-- Видео для воспроизведения -->
-  <video id="videoPlayback" src="/airPlan_converted.mp4" loop></video>
+  <video id="videoPlayback" src="./public/airPlan_converted.mp4" loop></video>
 
   <!-- TensorFlow.js -->
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet"></script>
 
   <!-- Основной код -->
-  <script type="module" src="/src/main.js"></script>
+  <script type="module" src="./src/main.js"></script>
 </body>
 </html>

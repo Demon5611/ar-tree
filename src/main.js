@@ -11,19 +11,45 @@ console.log("Начало работы программы.");
 // Настройка камеры
 async function setupCamera() {
   console.log("Настройка камеры...");
-  const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-  video.srcObject = stream;
+  
+  // Получаем список доступных устройств
+  const devices = await navigator.mediaDevices.enumerateDevices();
+  console.log("Доступные устройства:", devices);
+  
+  // Ищем фронтальную камеру
+  const frontCamera = devices.find(
+    (device) => device.kind === "videoinput" && device.label.toLowerCase().includes("front")
+  );
+  
+  // Если фронтальная камера найдена, добавляем её в constraints
+  const constraints = {
+    video: frontCamera
+      ? { deviceId: frontCamera.deviceId, width: { ideal: 1280 }, height: { ideal: 720 } }
+      : { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } } // fallback
+  };
+  console.log("Выбранные ограничения:", constraints);
 
-  return new Promise((resolve) => {
-    video.onloadedmetadata = () => {
-      console.log("Камера настроена. Ширина:", video.videoWidth, "Высота:", video.videoHeight);
+  try {
+    // Запрашиваем поток видео
+    const stream = await navigator.mediaDevices.getUserMedia(constraints);
+    console.log("Поток получен:", stream);
+    video.srcObject = stream;
 
-      // Устанавливаем размеры canvas и video на основе размеров окна
-      adjustCanvasAndVideo();
-      resolve(video);
-    };
-  });
+    return new Promise((resolve) => {
+      video.onloadedmetadata = () => {
+        console.log("Камера настроена. Ширина:", video.videoWidth, "Высота:", video.videoHeight);
+        adjustCanvasAndVideo();
+        resolve(video);
+      };
+    });
+  } catch (error) {
+    console.error("Ошибка доступа к камере:", error);
+    alert("Не удалось получить доступ к камере. Проверьте разрешения.");
+  }
 }
+
+
+
 
 // Корректировка привязки canvas и video к холсту
 function adjustCanvasAndVideo() {
@@ -43,7 +69,13 @@ function adjustCanvasAndVideo() {
   video.style.top = "50%";
   video.style.transform = "translate(-50%, -50%)";
 
+  canvas.style.width = `${canvas.width}px`;
+  canvas.style.height = `${canvas.height}px`;
+  canvas.style.left = "50%";
+  canvas.style.top = "50%";
+  canvas.style.transform = "translate(-50%, -50%)";
 }
+
 
 // Загрузка модели TensorFlow.js
 async function loadModel() {
@@ -56,12 +88,22 @@ async function loadModel() {
 // Извлечение эталонных признаков
 async function extractReferenceFeatures(model) {
   console.log("Извлечение эталонных признаков из изображения...");
+
+  // Проверка размеров эталонного изображения
+  if (!referenceImage.complete || referenceImage.naturalWidth === 0 || referenceImage.naturalHeight === 0) {
+    throw new Error("Эталонное изображение не загружено или имеет неправильные размеры.");
+  }
+
+  // Создание тензора на основе изображения
   const imageTensor = tf.browser.fromPixels(referenceImage).expandDims();
   const features = model.infer(imageTensor, true);
   console.log("Эталонные признаки извлечены.");
+
+  // Очистка ресурсов
   tf.dispose(imageTensor);
   return features;
 }
+
 
 // Сравнение текущего кадра с эталоном
 async function compareFrames(model) {
@@ -120,27 +162,34 @@ function detectBoundingBox(video) {
 let currentBoundingBox = null; // Хранит текущие координаты рамки
 
 function playVideoWithinBounds(boundingBox) {
-  // Если рамка не изменилась, не обновляем параметры
-  if (
-    currentBoundingBox &&
-    currentBoundingBox.x === boundingBox.x &&
-    currentBoundingBox.y === boundingBox.y &&
-    currentBoundingBox.width === boundingBox.width &&
-    currentBoundingBox.height === boundingBox.height
-  ) {
-    return;
+  try {
+    if (
+      currentBoundingBox &&
+      currentBoundingBox.x === boundingBox.x &&
+      currentBoundingBox.y === boundingBox.y &&
+      currentBoundingBox.width === boundingBox.width &&
+      currentBoundingBox.height === boundingBox.height
+    ) {
+      return;
+    }
+
+    console.log("Обновление видео в пределах рамки...");
+
+    currentBoundingBox = boundingBox;
+    videoPlayback.style.display = "block";
+    videoPlayback.style.left = `${boundingBox.x}px`;
+    videoPlayback.style.top = `${boundingBox.y}px`;
+    videoPlayback.style.width = `${boundingBox.width}px`;
+    videoPlayback.style.height = `${boundingBox.height}px`;
+
+    videoPlayback.play().catch((err) => {
+      console.error("Ошибка воспроизведения видео:", err);
+    });
+  } catch (error) {
+    console.error("Ошибка в playVideoWithinBounds:", error);
   }
-
-  console.log("Обновление видео в пределах рамки...");
-
-  currentBoundingBox = boundingBox;
-  videoPlayback.style.display = "block";
-  videoPlayback.style.left = `${boundingBox.x}px`;
-  videoPlayback.style.top = `${boundingBox.y}px`;
-  videoPlayback.style.width = `${boundingBox.width}px`;
-  videoPlayback.style.height = `${boundingBox.height}px`;
-  videoPlayback.play();
 }
+
 
 
 
@@ -175,3 +224,13 @@ async function main() {
 }
 
 main();
+
+async function logDevices() {
+  const devices = await navigator.mediaDevices.enumerateDevices();
+  console.log("Доступные устройства:");
+  devices.forEach((device, index) => {
+    console.log(`[${index}] ID: ${device.deviceId}, Label: ${device.label}, Kind: ${device.kind}`);
+  });
+}
+logDevices();
+
